@@ -131,6 +131,7 @@ bool IPFinder::getIPs(std::vector<info_IP>* vec_name, bool return_loopback)
     int family, s;
     char host[NI_MAXHOST];
 
+    // TODO arm64 doesn't seem to support getifaddrs
     if (getifaddrs(&ifaddr) == -1) {
         perror("getifaddrs");
         exit(EXIT_FAILURE);
