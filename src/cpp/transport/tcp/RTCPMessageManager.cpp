@@ -274,7 +274,7 @@ TCPTransactionId RTCPMessageManager::sendConnectionRequest(TCPChannelResource *p
     SerializedPayload_t payload(static_cast<uint32_t>(ConnectionRequest_t::getBufferCdrSerializedSize(request)));
     request.serialize(&payload);
 
-    logInfo(RTCP_MSG, "Send [BIND_CONNECTION_REQUEST] PhysicalPort: " << IPLocator::getPhysicalPort(locator));
+    logError(RTCP_MSG, "Send [BIND_CONNECTION_REQUEST] PhysicalPort: " << IPLocator::getPhysicalPort(locator));
     TCPTransactionId id = getTransactionId();
     sendData(p_channel_resource, BIND_CONNECTION_REQUEST, id, &payload);
     p_channel_resource->change_status(TCPChannelResource::eConnectionStatus::eWaitingForBindResponse);

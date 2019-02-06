@@ -80,7 +80,7 @@ public:
         RTCPMessageManager* rtcpManager,
         asio::io_service& service,
         asio::ssl::context& ssl_context,
-        asio::ip::tcp::socket&& socket,
+        tcp_secure::eProsimaTCPSocket socket,
         uint32_t maxMsgSize);
 
     virtual ~TCPChannelResourceSecure();

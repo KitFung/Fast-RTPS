@@ -58,7 +58,7 @@ TCPChannelResourceSecure::TCPChannelResourceSecure(
         RTCPMessageManager* rtcpManager,
         asio::io_service& service,
         asio::ssl::context& ssl_context,
-        asio::ip::tcp::socket&& socket,
+        tcp_secure::eProsimaTCPSocket socket,
         uint32_t maxMsgSize)
     : TCPChannelResource(parent, rtcpManager, maxMsgSize)
     , service_(service)
@@ -68,11 +68,13 @@ TCPChannelResourceSecure::TCPChannelResourceSecure(
     //apply_tls_config();
     //secure_socket_ = createTCPSocket(std::move(socket), ssl_context_);
     //set_tls_verify_mode(parent->configuration());
-    ssl_context_.load_verify_file("ca.pem");
+    //ssl_context_.load_verify_file("ca.pem");
 
-    secure_socket_ = createTCPSocket(service, ssl_context_);
-    secure_socket_->set_verify_mode(ssl::verify_peer);
+    //secure_socket_ = createTCPSocket(service, ssl_context_);
+    secure_socket_ = moveSocket(socket);
+    //secure_socket_->set_verify_mode(ssl::verify_peer);
 
+    /*
     secure_socket_->set_verify_callback([](
         bool preverified,
         ssl::verify_context& ctx) -> bool
@@ -80,6 +82,7 @@ TCPChannelResourceSecure::TCPChannelResourceSecure(
         logError(VERIFY_CB, "Verified");
         return true;
     });
+    */
 }
 
 TCPChannelResourceSecure::~TCPChannelResourceSecure()
@@ -225,7 +228,7 @@ void TCPChannelResourceSecure::connect()
                         if (!error)
                         {
                             logError(CONNECTOR, "TODO BIEN HASTA AQUI!!");
-                            //parent_->SocketConnected(locator_, error);
+                            parent_->SocketConnected(locator_, error);
                         }
                         else
                         {

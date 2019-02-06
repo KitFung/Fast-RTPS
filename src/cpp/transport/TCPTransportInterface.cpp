@@ -1310,31 +1310,40 @@ void TCPTransportInterface::SocketAccepted(
 
 void TCPTransportInterface::SecureSocketAccepted(
         TCPAcceptorSecure* acceptor,
-        asio::ip::tcp::socket&& socket,
+        tcp_secure::eProsimaTCPSocket socket,
         const asio::error_code& error)
 {
+    logError(ACCEPTOR, "-3-TODO BIEN HASTA AQUI!!-3-");
     {
+        logError(ACCEPTOR, "-3-AAA-3-");
         std::unique_lock<std::mutex> scopedLock(sockets_map_mutex_);
+        logError(ACCEPTOR, "-3-BBB-3-");
         if (std::find(deleted_acceptors_.begin(), deleted_acceptors_.end(), acceptor) != deleted_acceptors_.end())
         {
+            logError(ACCEPTOR, "-3-CCC-3-");
             //std::cout << "Acceptor called on delete" << std::endl;
             // SocketAccepted was called by asio after the acceptor was deleted. By must abort any operation.
-            logWarning(RTCP, "Acceptor called on delete");
+            logError(RTCP, "Acceptor called on delete");
             return;
         }
+        logError(ACCEPTOR, "-3-DDD-3-");
     }
 
+    logError(ACCEPTOR, "-3-2-TODO BIEN HASTA AQUI!!-3-2-");
     if (!error.value())
     {
+        logError(ACCEPTOR, "-4-TODO BIEN HASTA AQUI!!-4-");
         std::unique_lock<std::mutex> scopedLock(sockets_map_mutex_);
         if (socket_Acceptors_.find(IPLocator::getPhysicalPort(acceptor->locator())) != socket_Acceptors_.end())
         {
             // Store the new connection.
+            logError(SSA, "AAAAAAAAAAAAAAAAA");
             TCPChannelResource *p_channel_resource = new TCPChannelResourceSecure(this, rtcp_message_manager_,
-                io_service_, ssl_context_, std::move(socket), configuration()->maxMessageSize);
-
+                io_service_, ssl_context_, socket, configuration()->maxMessageSize);
+                //io_service_, ssl_context_, std::move(socket), configuration()->maxMessageSize);
+            logError(SSA, "BBBBBBBBBBBBBBBBB");
             p_channel_resource->set_options(configuration());
-
+            logError(SSA, "CCCCCCCCCCCCCCCCC");
             unbound_channel_resources_.push_back(p_channel_resource);
             p_channel_resource->thread(new std::thread(&TCPTransportInterface::perform_listen_operation, this,
                 p_channel_resource));
@@ -1342,7 +1351,7 @@ void TCPTransportInterface::SecureSocketAccepted(
                 this, p_channel_resource));
 
 
-            logInfo(RTCP, " Accepted connection (physical local: " << IPLocator::getPhysicalPort(acceptor->locator())
+            logError(RTCP, " Accepted connection (physical local: " << IPLocator::getPhysicalPort(acceptor->locator())
                 << ", remote: " << p_channel_resource->remote_endpoint().port()
                 << ") IP: " << p_channel_resource->remote_endpoint().address());
 
@@ -1367,7 +1376,7 @@ void TCPTransportInterface::SecureSocketAccepted(
         logError(RTCP, " Accepting connection failed (error: " << error.message() << ")");
         eClock::my_sleep(200); // Wait a little to accept again.
     }
-
+    logError(ACCEPTOR, "---FAIL!!---");
     if (error.value() != eSocketErrorCodes::eConnectionAborted) // Operation Aborted
     {
         // Accept new connections for the same port. Could be not found when exiting.

@@ -91,30 +91,40 @@ void TCPAcceptorSecure::accept(
         {
             if (!error)
             {
-                ssl::stream<tcp::socket> socket_(std::move(socket), ssl_context);
-                socket_.async_handshake(ssl::stream_base::server,
-                    [this, &parent, &socket](const std::error_code& error)
+                //ssl::stream<tcp::socket>* socket_ = new ssl::stream<tcp::socket>(std::move(socket), ssl_context);
+                //tcp_secure::eProsimaTCPSocket socket_ = tcp_secure::createTCPSocket(std::move(socket), ssl_context);
+                ssl::stream<tcp::socket>* socket_ = new ssl::stream<tcp::socket>(std::move(socket), ssl_context);
+                socket_->async_handshake(ssl::stream_base::server,
+                    [this, &parent, &socket_](const std::error_code& error)
                     {
-                    if (!error)
-                    {
-                        logError(ACCEPTOR, "TODO BIEN HASTA AQUI!!");
-                        //parent->SecureSocketAccepted(this, std::move(socket), error);
-                    }
-                    else
-                    {
-                        std::cout << "Handshake failed: " << error.message() << "\n";
-                        logError(TLS_SERVER, error.message());
-                    }
+                        if (!error)
+                        {
+                            logError(ACCEPTOR, "---TODO BIEN HASTA AQUI!!---");
+                            tcp_secure::eProsimaTCPSocket socket_ptr = tcp_secure::eProsimaTCPSocket(socket_);
+                            logError(ACCEPTOR, "-2-TODO BIEN HASTA AQUI!!-2-");
+                            //parent->SecureSocketAccepted(this, std::move(socket), error);
+                            parent->SecureSocketAccepted(this, socket_ptr, error);
+                        }
+                        else
+                        {
+                            std::cout << "Handshake failed: " << error.message() << "\n";
+                            logError(TLS_SERVER, error.message());
+                            tcp_secure::eProsimaTCPSocket socket_ptr = tcp_secure::eProsimaTCPSocket(socket_);
+                            //parent->SecureSocketAccepted(this, std::move(socket), error);
+                            parent->SecureSocketAccepted(this, socket_ptr, error); // To accept again
+                            delete socket_;
+                        }
+                        //delete socket_;
                     });
             }
             else
             {
                 std::cout << "Accept failed: " << error.message() << "\n";
                 logError(TLS_SERVER_ACCEPT, error.message());
-            }
 
-            std::cout << "Accept again: " << error.message() << "\n";
-            accept(parent, io_service, ssl_context);
+                std::cout << "Accept again: " << error.message() << "\n";
+                accept(parent, io_service, ssl_context);
+            }
         });
 
 /*

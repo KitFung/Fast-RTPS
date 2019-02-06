@@ -336,7 +336,7 @@ public:
     //! Callback called each time that an incomming connection is accepted (secure).
     void SecureSocketAccepted(
         TCPAcceptorSecure* acceptor,
-        asio::ip::tcp::socket&& socket,
+        tcp_secure::eProsimaTCPSocket socket,
         const asio::error_code& error);
 
     //! Callback called each time that an outgoing connection is established.
