@@ -35,9 +35,22 @@ TCPChannelResourceSecure::TCPChannelResourceSecure(
     , service_(service)
     , ssl_context_(ssl_context)
 {
-    apply_tls_config();
+    //apply_tls_config();
+    //secure_socket_ = createTCPSocket(service, ssl_context_);
+    //set_tls_verify_mode(parent->configuration());
+
+    ssl_context_.load_verify_file("ca.pem");
+
     secure_socket_ = createTCPSocket(service, ssl_context_);
-    set_tls_verify_mode(parent->configuration());
+    secure_socket_->set_verify_mode(ssl::verify_peer);
+
+    secure_socket_->set_verify_callback([](
+        bool preverified,
+        ssl::verify_context& ctx) -> bool
+    {
+        logError(VERIFY_CB, "Verified");
+        return true;
+    });
 }
 
 TCPChannelResourceSecure::TCPChannelResourceSecure(
@@ -52,9 +65,21 @@ TCPChannelResourceSecure::TCPChannelResourceSecure(
     , ssl_context_(ssl_context)
     //, secure_socket_(moveSocket(socket))
 {
-    apply_tls_config();
-    secure_socket_ = createTCPSocket(std::move(socket), ssl_context_);
-    set_tls_verify_mode(parent->configuration());
+    //apply_tls_config();
+    //secure_socket_ = createTCPSocket(std::move(socket), ssl_context_);
+    //set_tls_verify_mode(parent->configuration());
+    ssl_context_.load_verify_file("ca.pem");
+
+    secure_socket_ = createTCPSocket(service, ssl_context_);
+    secure_socket_->set_verify_mode(ssl::verify_peer);
+
+    secure_socket_->set_verify_callback([](
+        bool preverified,
+        ssl::verify_context& ctx) -> bool
+    {
+        logError(VERIFY_CB, "Verified");
+        return true;
+    });
 }
 
 TCPChannelResourceSecure::~TCPChannelResourceSecure()
@@ -154,6 +179,7 @@ void TCPChannelResourceSecure::apply_tls_config()
 
 void TCPChannelResourceSecure::connect()
 {
+    using asio::ip::tcp;
     std::unique_lock<std::mutex> scoped(status_mutex_);
     if (connection_status_ == eConnectionStatus::eDisconnected)
     {
@@ -161,6 +187,7 @@ void TCPChannelResourceSecure::connect()
         ip::tcp::endpoint endpoint = parent_->generate_local_endpoint(locator_, IPLocator::getPhysicalPort(locator_));
         try
         {
+            /*
             secure_socket_->lowest_layer().async_connect(endpoint,
                 [this](const std::error_code& error)
                 {
@@ -180,6 +207,37 @@ void TCPChannelResourceSecure::connect()
                     }
 
                 });
+                */
+            
+            tcp::resolver resolver(service_);
+            auto endpoints = resolver.resolve(IPLocator::toIPv4string(locator_), std::to_string(IPLocator::getPhysicalPort(locator_)));
+
+            asio::async_connect(secure_socket_->lowest_layer(), endpoints,
+                [this](const std::error_code& error,
+                    const tcp::endpoint& /*endpoint*/)
+            {
+                if (!error)
+                {
+                    //handshake();
+                    secure_socket_->async_handshake(ssl::stream_base::client,
+                        [this](const std::error_code& error)
+                    {
+                        if (!error)
+                        {
+                            logError(CONNECTOR, "TODO BIEN HASTA AQUI!!");
+                            //parent_->SocketConnected(locator_, error);
+                        }
+                        else
+                        {
+                            std::cout << "Handshake failed: " << error.message() << "\n";
+                        }
+                    });
+                }
+                else
+                {
+                    std::cout << "Connect failed: " << error.message() << "\n";
+                }
+            });
         }
         catch(const std::system_error &error)
         {

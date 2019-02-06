@@ -23,39 +23,58 @@ namespace rtps{
 using namespace asio;
 
 TCPAcceptorSecure::TCPAcceptorSecure(
-        asio::io_service& io_service,
-        asio::ssl::context& ssl_context,
+        io_service& io_service,
+        ssl::context& ssl_context,
         TCPTransportInterface* parent,
         const Locator_t& locator)
     : TCPAcceptor(io_service, parent, locator)
     , ssl_context_(ssl_context)
 {
-    apply_tls_config(parent->configuration());
+    //apply_tls_config(parent->configuration());
     //secure_socket_ = tcp_secure::createTCPSocket(io_service, ssl_context);
     //set_options(parent->configuration());
+
+    tls_password_ = parent->configuration()->tls_config.password;
+    ssl_context_.set_options(
+        ssl::context::default_workarounds
+        | ssl::context::no_sslv2
+        | ssl::context::single_dh_use);
+    ssl_context_.set_password_callback(std::bind(&TCPAcceptorSecure::get_password, this));
+    ssl_context_.use_certificate_chain_file("server.pem");
+    ssl_context_.use_private_key_file("server.pem", ssl::context::pem);
+    ssl_context_.use_tmp_dh_file("dh2048.pem");
 }
 
 TCPAcceptorSecure::TCPAcceptorSecure(
-        asio::io_service& io_service,
-        asio::ssl::context& ssl_context,
+        io_service& io_service,
+        ssl::context& ssl_context,
         const std::string& interface,
         const Locator_t& locator,
         const TCPTransportDescriptor* descriptor)
     : TCPAcceptor(io_service, interface, locator)
     , ssl_context_(ssl_context)
 {
-    apply_tls_config(descriptor);
+    //apply_tls_config(descriptor);
     //secure_socket_ = tcp_secure::createTCPSocket(io_service, ssl_context);
     //set_options(descriptor);
+    
+    ssl_context_.set_options(
+        ssl::context::default_workarounds
+        | ssl::context::no_sslv2
+        | ssl::context::single_dh_use);
+    ssl_context_.set_password_callback(std::bind(&TCPAcceptorSecure::get_password, this));
+    ssl_context_.use_certificate_chain_file("server.pem");
+    ssl_context_.use_private_key_file("server.pem", ssl::context::pem);
+    ssl_context_.use_tmp_dh_file("dh2048.pem");
 }
 
 void TCPAcceptorSecure::accept(
         TCPTransportInterface* parent,
-        asio::io_service& io_service,
-        asio::ssl::context& ssl_context)
+        io_service& io_service,
+        ssl::context& ssl_context)
 {
     //ssl_context_ = std::move(ssl_context);
-    secure_socket_ = tcp_secure::createTCPSocket(io_service, ssl_context);
+    //secure_socket_ = tcp_secure::createTCPSocket(io_service, ssl_context);
     //apply_tls_config(parent->configuration());
     //set_options(parent->configuration());
 
@@ -65,8 +84,42 @@ void TCPAcceptorSecure::accept(
     logError(ACEPTOR, "Listening at: " << acceptor_.local_endpoint().address()
         << ":" << acceptor_.local_endpoint().port());
 
+
+    using asio::ip::tcp;
     acceptor_.async_accept(
-        [this, parent](const std::error_code& error, asio::ip::tcp::socket socket)
+        [this, &parent, &io_service, &ssl_context](const std::error_code& error, tcp::socket socket)
+        {
+            if (!error)
+            {
+                ssl::stream<tcp::socket> socket_(std::move(socket), ssl_context);
+                socket_.async_handshake(ssl::stream_base::server,
+                    [this, &parent, &socket](const std::error_code& error)
+                    {
+                    if (!error)
+                    {
+                        logError(ACCEPTOR, "TODO BIEN HASTA AQUI!!");
+                        //parent->SecureSocketAccepted(this, std::move(socket), error);
+                    }
+                    else
+                    {
+                        std::cout << "Handshake failed: " << error.message() << "\n";
+                        logError(TLS_SERVER, error.message());
+                    }
+                    });
+            }
+            else
+            {
+                std::cout << "Accept failed: " << error.message() << "\n";
+                logError(TLS_SERVER_ACCEPT, error.message());
+            }
+
+            std::cout << "Accept again: " << error.message() << "\n";
+            accept(parent, io_service, ssl_context);
+        });
+
+/*
+    acceptor_.async_accept(
+        [this, parent](const std::error_code& error, ip::tcp::socket socket)
         {
             if (!error)
             {
@@ -83,6 +136,7 @@ void TCPAcceptorSecure::accept(
             }
 
         });
+*/
 }
 
 void TCPAcceptorSecure::apply_tls_config(const TCPTransportDescriptor* descriptor)
