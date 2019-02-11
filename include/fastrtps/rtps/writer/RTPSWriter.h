@@ -22,6 +22,7 @@
 #include "../Endpoint.h"
 #include "../messages/RTPSMessageGroup.h"
 #include "../attributes/WriterAttributes.h"
+#include <functional>
 #include <vector>
 #include <memory>
 
